@@ -1,0 +1,139 @@
+Description: Storage patterns for IndexedDB and localStorage in TileR
+Globs: src/**/storage/**/*.{ts,tsx}, src/**/*storage*.{ts,tsx}
+
+# TileR Storage Patterns
+
+## IndexedDB Usage
+
+### Database Structure
+- **Database name**: `TileR_DB` (update from existing `BotAI_DB`)
+- **Version**: Increment on schema changes
+- **Stores**: `projects`, `tiles`, `settings`
+
+### Store Definitions
+```typescript
+// projects store: Project metadata (JSON)
+// tiles store: Tile pixel data (Blobs, keyed by projectId + tileId)
+// settings store: User preferences (can use localStorage as fallback)
+```
+
+### Abstraction Pattern
+Use wrapper functions in `/src/storage/db.ts`:
+```typescript
+export const db = {
+  save: async <T>(storeName: string, data: T): Promise<IDBValidKey>
+  get: async <T>(storeName: string, id: IDBValidKey): Promise<T | undefined>
+  getAll: async <T>(storeName: string): Promise<T[]>
+  delete: async (storeName: string, id: IDBValidKey): Promise<void>
+  clear: async (storeName: string): Promise<void>
+}
+```
+
+### Blob Handling
+- Store tile images as Blobs in IndexedDB
+- Use `URL.createObjectURL()` for rendering
+- **Always clean up**: Call `URL.revokeObjectURL()` to prevent memory leaks
+- Store Blobs separately from project metadata
+
+Example:
+```typescript
+// Save tile as blob
+const blob = await canvas.toBlob();
+await db.save('tiles', blob, `${projectId}-${tileId}`);
+
+// Load and render
+const blob = await db.get<Blob>('tiles', `${projectId}-${tileId}`);
+const url = URL.createObjectURL(blob);
+// ... use url for rendering
+// Clean up when done
+URL.revokeObjectURL(url);
+```
+
+### Versioning and Migration
+- Increment DB version on schema changes
+- Handle `onupgradeneeded` for store creation
+- Include project version field for data migration
+- Test migrations with sample data
+
+## localStorage Usage
+
+### Settings Storage
+Store in localStorage:
+- Theme preference (`'light' | 'dark'`)
+- Recent projects list (max 10, as JSON array)
+- UI preferences (grid visibility, etc.)
+
+### Pattern
+```typescript
+// Use existing wrapper in src/lib/storage.ts
+localStorage.set('theme', 'dark');
+const theme = localStorage.get('theme');
+```
+
+### Error Handling
+- Wrap localStorage calls in try-catch
+- Handle quota exceeded errors gracefully
+- Provide fallback behavior
+
+## Auto-Save Pattern
+
+### Implementation
+- Debounce save operations (30 second interval)
+- Save on tab close / visibility change
+- Generate thumbnail (canvas snapshot) on save
+- Use timestamps for conflict resolution
+
+Example:
+```typescript
+const autoSave = useMemo(
+  () => debounce(async (project: Project) => {
+    await db.save('projects', project);
+    const thumbnail = await generateThumbnail();
+    await db.save('projects', { ...project, thumbnail });
+  }, 30000),
+  []
+);
+
+useEffect(() => {
+  autoSave(project);
+}, [project, autoSave]);
+```
+
+### Conflict Resolution
+- Compare timestamps on load
+- Warn user if local version is newer
+- Provide merge/overwrite options
+
+## Project Management
+
+### Recent Projects
+- Store in localStorage as JSON array
+- Limit to 10 most recent
+- Include: id, name, thumbnail, lastModified
+- Update on save/load
+
+### Project Loading
+1. Load metadata from IndexedDB
+2. Load tile blobs separately
+3. Convert blobs to ImageData or canvas
+4. Hydrate state from loaded data
+
+## Error Handling
+
+### IndexedDB Errors
+- Handle `onerror` events
+- Provide user-friendly error messages
+- Fallback to localStorage for critical settings
+- Log errors for debugging
+
+### Storage Quota
+- Handle quota exceeded errors
+- Warn user when approaching limits
+- Provide cleanup options
+
+## Testing Storage
+
+- Test on multiple browsers (Chrome, Firefox, Safari)
+- Test with large datasets (256 tiles)
+- Test quota limits
+- Test offline scenarios

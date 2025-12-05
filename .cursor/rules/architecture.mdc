@@ -1,0 +1,109 @@
+Description: Component organization and architecture patterns for TileR
+Globs: src/**/*.{ts,tsx}
+
+# TileR Architecture Patterns
+
+## Component Organization
+
+### Feature-Based Structure
+```
+src/
+├── features/
+│   ├── tiles/          # Tile editing feature
+│   │   ├── Palette.tsx
+│   │   ├── Editor.tsx
+│   │   └── hooks/
+│   ├── map/            # Map editing feature
+│   │   ├── MapCanvas.tsx
+│   │   └── hooks/
+│   └── projects/       # Project management
+│       └── ProjectManager.tsx
+├── components/
+│   ├── ui/             # shadcn/ui primitives
+│   └── canvas/         # Reusable canvas components
+├── hooks/              # Shared hooks
+├── lib/                # Utility libraries
+└── utils/              # Export utilities
+```
+
+### Component Naming
+- Feature components: PascalCase matching feature name (e.g., `Palette.tsx`, `MapCanvas.tsx`)
+- UI primitives: lowercase with hyphens (shadcn convention: `button.tsx`)
+- Hooks: camelCase with `use` prefix (e.g., `useTiles.ts`, `useCanvas.ts`)
+
+## Separation of Concerns
+
+### Canvas Components
+- **Rendering only**: Canvas components handle drawing logic
+- **Props-driven**: Accept all data via props, no internal state for data
+- **Callbacks**: Use `onDraw`, `onMouseDown`, etc. for event handling
+- **State external**: Transform state (pan/zoom) managed via hooks
+
+Example pattern:
+```typescript
+// Canvas component - pure rendering
+<Canvas
+  width={width}
+  height={height}
+  scale={scale}
+  offsetX={offsetX}
+  offsetY={offsetY}
+  onDraw={(ctx) => { /* render logic */ }}
+/>
+
+// State managed externally
+const { scale, offsetX, offsetY, zoomIn, zoomOut } = useCanvas();
+```
+
+### State Management
+- **Feature state**: Managed in feature-specific hooks or stores
+- **App-wide state**: Use Zustand or Context + Reducer (projects list)
+- **Local state**: Component-specific state with `useState`
+- **No global state**: Avoid global state for MVP
+
+### Tool System Pattern
+- Tool enum: `type ToolType = 'pencil' | 'eraser' | 'fill' | 'picker'`
+- Tool state in store/hook
+- Tool-specific handlers passed to canvas as callbacks
+- Extensible via plugin pattern
+
+## Component Patterns
+
+### Presentational Components
+- Receive data via props
+- Emit events via callbacks
+- No business logic
+- Pure rendering
+
+### Container Components
+- Manage state and side effects
+- Fetch data
+- Coordinate child components
+- Use hooks for logic
+
+### Custom Hooks
+- Encapsulate reusable logic
+- Return state and handlers
+- Can call other hooks
+- Example: `useTiles()`, `useCanvas()`, `useProject()`
+
+## Import Patterns
+
+- Use `@/` alias for src-relative imports
+- Feature modules import from shared utilities
+- Components import from `@/components/ui` for primitives
+- Avoid circular dependencies
+
+Example:
+```typescript
+import { Button } from '@/components/ui/button'
+import { useTiles } from '@/features/tiles/hooks/useTiles'
+import { db } from '@/lib/storage/db'
+```
+
+## File Organization Rules
+
+- One component per file (except related small components)
+- Co-locate related files (component + hook + types)
+- Keep feature folders self-contained
+- Shared utilities in `/src/utils/` or `/src/lib/`

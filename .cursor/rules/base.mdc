@@ -1,0 +1,52 @@
+Description: Core project principles and development guidelines for TileR
+Globs: **/*.{ts,tsx,js,jsx}
+
+# TileR Core Principles
+
+## SOLID Principles Enforcement
+
+### Single Responsibility
+- Each component should have one clear purpose
+- Canvas components handle only rendering, not state management
+- State management lives in separate hooks (e.g., `useTiles`, `useCanvas`)
+- Storage logic is abstracted in dedicated modules
+
+### Open-Closed
+- Tools should be extensible via plugin pattern
+- Canvas rendering decoupled from UI state
+- Export formats can be added without modifying core logic
+- Components accept props for customization, not hardcoded behavior
+
+### Dependency Inversion
+- Components depend on interfaces, not concrete implementations
+- Storage abstraction allows swapping IndexedDB implementation
+- Use dependency injection for testability
+
+## Modular Design Requirements
+
+- Feature-based organization: `/src/features/tiles`, `/src/features/map`, `/src/features/projects`
+- Shared utilities in `/src/utils/` or `/src/lib/`
+- Reusable UI components in `/src/components/ui/`
+- Feature-specific components in their respective feature folders
+
+## No Breaking Changes Policy
+
+- Build atop existing starter codebase without altering core config
+- Do not modify `index.html` or `vite.config.ts` structure unnecessarily
+- Preserve existing chatbot infrastructure for future repurposing
+- All additions should be additive, not destructive
+
+## Code Quality Standards
+
+- Use TypeScript strict mode
+- Prefer functional components with hooks
+- Avoid global state for MVP (use Zustand or Context + Reducer if needed)
+- Write self-documenting code with clear variable names
+- Keep functions small and focused
+
+## Performance Considerations
+
+- Optimize canvas redraws (only affected regions)
+- Debounce expensive operations (auto-save, etc.)
+- Limit map dimensions (256x256 max for MVP)
+- Use requestAnimationFrame for smooth animations

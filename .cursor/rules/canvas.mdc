@@ -1,0 +1,160 @@
+Description: Canvas rendering best practices for TileR
+Globs: src/**/*canvas*.{ts,tsx}, src/components/canvas/**/*.{ts,tsx}
+
+# TileR Canvas Rendering Guidelines
+
+## Canvas Component Pattern
+
+### Base Canvas Component
+Create reusable `/src/components/canvas/Canvas.tsx`:
+- Accept props: `width`, `height`, `scale`, `offsetX`, `offsetY`, `onDraw`
+- Use `useRef` for canvas element
+- Use `useEffect` for resize and redraw
+- Render via `onDraw` callback prop
+
+### Rendering Responsibilities
+- Canvas components handle **only rendering**
+- State management external (via hooks)
+- Transform state (pan/zoom) passed as props
+- Drawing logic in `onDraw` callback
+
+## Pan/Zoom Implementation
+
+### Coordinate Transformation
+Use `ctx.setTransform()` for pan/zoom:
+```typescript
+ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+```
+
+### Mouse Wheel Zoom
+- Zoom centered on cursor position
+- Calculate new scale and offset
+- Maintain zoom limits (25%-400%)
+
+### Panning
+- Middle-click/drag for panning
+- Track mouse delta
+- Update offsetX and offsetY
+
+### Touch Gestures
+- Pinch zoom: Calculate scale from touch distance
+- Two-finger pan: Average touch positions
+- Single finger: Tool interaction (not pan)
+
+## Grid Rendering
+
+### Grid Drawing
+- Draw vertical/horizontal lines at tile intervals
+- Respect current zoom and pan transforms
+- Use high-contrast colors for accessibility
+- Toggleable via prop
+
+Pattern:
+```typescript
+function drawGrid(ctx: CanvasRenderingContext2D, tileSize: number, scale: number) {
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1 / scale; // Scale line width
+  
+  // Calculate visible grid lines
+  const startX = Math.floor(offsetX / (tileSize * scale));
+  const endX = Math.ceil((offsetX + width) / (tileSize * scale));
+  // ... draw lines
+}
+```
+
+## Pixel-Perfect Drawing
+
+### Pixel Alignment
+- Snap all drawing to pixel grid
+- Use integer coordinates
+- Account for zoom when drawing
+- Use `imageSmoothingEnabled = false` for pixel art
+
+### Drawing Tools
+- **Pencil**: Draw single pixels on mouse move
+- **Eraser**: Draw transparent (or clear pixels)
+- **Fill**: Flood fill algorithm (4-way or 8-way)
+- **Picker**: Sample pixel via `getImageData`
+
+### ImageData Manipulation
+```typescript
+// Get pixel data
+const imageData = ctx.getImageData(x, y, width, height);
+const data = imageData.data; // Uint8ClampedArray
+
+// Modify pixels (RGBA format)
+data[i] = r;     // Red
+data[i + 1] = g; // Green
+data[i + 2] = b; // Blue
+data[i + 3] = a; // Alpha
+
+// Put back
+ctx.putImageData(imageData, x, y);
+```
+
+## Performance Optimization
+
+### Redraw Optimization
+- Only redraw affected regions when possible
+- Use `requestAnimationFrame` for smooth animations
+- Debounce expensive operations
+- Cache rendered tiles when possible
+
+### Large Canvas Handling
+- Limit map dimensions (256x256 max for MVP)
+- Use `OffscreenCanvas` for heavy operations (if supported)
+- Render visible region only (viewport culling)
+- Optimize grid drawing (only visible lines)
+
+### Memory Management
+- Clean up object URLs (`URL.revokeObjectURL`)
+- Dispose of large ImageData objects
+- Limit undo stack size (20 steps max)
+
+## Canvas State Management
+
+### Transform State
+Manage via hook (`useCanvas`):
+```typescript
+const { scale, offsetX, offsetY, zoomIn, zoomOut, pan, resetView } = useCanvas();
+```
+
+### Drawing State
+- Tool selection in store/hook
+- Color selection (primary/secondary)
+- Current tile being edited
+- Map layer data
+
+## Event Handling
+
+### Mouse Events
+- `onMouseDown`: Start drawing/panning
+- `onMouseMove`: Continue drawing/update preview
+- `onMouseUp`: End drawing
+- `onWheel`: Zoom
+- `onContextMenu`: Prevent default (right-click erase)
+
+### Touch Events
+- `onTouchStart`: Begin gesture
+- `onTouchMove`: Update gesture
+- `onTouchEnd`: Complete gesture
+- Handle multi-touch for zoom/pan
+
+### Coordinate Conversion
+Convert screen coordinates to canvas coordinates:
+```typescript
+function screenToCanvas(screenX: number, screenY: number, scale: number, offsetX: number, offsetY: number) {
+  return {
+    x: (screenX - offsetX) / scale,
+    y: (screenY - offsetY) / scale
+  };
+}
+```
+
+## Best Practices
+
+- Always check canvas context exists before drawing
+- Handle canvas resize properly (match display size)
+- Use high DPI support (`devicePixelRatio`)
+- Test on different screen sizes and zoom levels
+- Ensure grid lines are visible at all zoom levels

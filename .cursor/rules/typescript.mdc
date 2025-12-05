@@ -1,0 +1,146 @@
+Description: TypeScript type safety and interface guidelines for TileR
+Globs: src/**/*.{ts,tsx}
+
+# TileR TypeScript Guidelines
+
+## Type Safety Requirements
+
+- Use strict TypeScript mode
+- Define interfaces for all data structures
+- Avoid `any` type (use `unknown` if necessary)
+- Use type guards for runtime validation
+- Prefer interfaces over type aliases for object shapes
+
+## Core Data Interfaces
+
+All core data structures must match these interfaces (defined in `/src/types/`):
+
+### Tile Interface
+```typescript
+interface Tile {
+  id: number;
+  name?: string;
+  tags?: string[];
+  data: Uint8ClampedArray; // Pixel data (r,g,b,a per pixel)
+  width: number;
+  height: number;
+}
+```
+
+### Tileset Interface
+```typescript
+interface Tileset {
+  tiles: Tile[];
+  tilewidth: number;
+  tileheight: number;
+}
+```
+
+### Layer Interface
+```typescript
+interface Layer {
+  id: number;
+  name: string;
+  data: number[]; // Tile IDs (CSV-like, -1 for empty)
+  width: number;
+  height: number;
+}
+```
+
+### Map Interface (Tiled-compatible)
+```typescript
+interface Map {
+  version: '1.0';
+  width: number;
+  height: number;
+  tilewidth: number;
+  tileheight: number;
+  layers: Layer[];
+  tilesets: Tileset[]; // Embedded for MVP
+}
+```
+
+### Project Interface
+```typescript
+interface Project {
+  id: string;
+  name: string;
+  tileset: Tileset;
+  map: Map;
+  settings: { theme: 'light' | 'dark' };
+  version: number;
+  thumbnail?: string; // DataURL
+}
+```
+
+## Type Definitions Location
+
+- Core interfaces: `/src/types/Tile.ts`, `/src/types/Map.ts`, etc.
+- Feature-specific types: Co-located with feature (e.g., `/src/features/tiles/types.ts`)
+- Utility types: `/src/types/utils.ts`
+
+## Type Patterns
+
+### Tool Types
+```typescript
+type ToolType = 'pencil' | 'eraser' | 'fill' | 'picker';
+```
+
+### Event Handlers
+```typescript
+type CanvasDrawHandler = (ctx: CanvasRenderingContext2D) => void;
+type MouseEventHandler = (event: MouseEvent) => void;
+```
+
+### Storage Types
+```typescript
+type StoreName = 'projects' | 'tiles' | 'settings';
+```
+
+## Data Serialization
+
+### Pixel Data
+- Use `Uint8ClampedArray` for pixel data (RGBA format)
+- Serialize to Blob for IndexedDB storage
+- Deserialize from Blob when loading
+
+### Project Serialization
+- Store as JSON for metadata
+- Store tile images as separate Blobs
+- Include version field for migration support
+
+## Type Guards
+
+Create type guards for runtime validation:
+```typescript
+function isTile(obj: unknown): obj is Tile {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'data' in obj &&
+    'width' in obj &&
+    'height' in obj
+  );
+}
+```
+
+## Strict TypeScript Rules
+
+- Enable `strict: true` in tsconfig
+- Use `readonly` for immutable data
+- Prefer `const` assertions for literal types
+- Use branded types for IDs if needed (e.g., `type TileId = number & { readonly __brand: 'TileId' }`)
+
+## Generic Patterns
+
+Use generics for reusable utilities:
+```typescript
+function dbGet<T>(storeName: string, id: IDBValidKey): Promise<T | undefined>
+```
+
+## Avoid Type Assertions
+
+- Prefer type guards over `as` assertions
+- Use `unknown` before narrowing to specific type
+- Validate data at boundaries (API, storage, user input)

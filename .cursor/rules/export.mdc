@@ -1,0 +1,193 @@
+Description: Export format patterns for PNG and Tiled JSON in TileR
+Globs: src/utils/export*.{ts,tsx}
+
+# TileR Export Guidelines
+
+## Tiled JSON Format Compliance
+
+### Format Specification
+Follow Tiled JSON map format: https://doc.mapeditor.org/en/stable/reference/json-map-format/
+
+### Required Fields
+```typescript
+interface TiledMap {
+  version: string;           // "1.0"
+  tiledversion: string;      // Tiled version
+  type: "map";
+  orientation: "orthogonal";
+  renderorder: "right-down";
+  width: number;             // Map width in tiles
+  height: number;            // Map height in tiles
+  tilewidth: number;         // Tile width in pixels
+  tileheight: number;        // Tile height in pixels
+  layers: TiledLayer[];
+  tilesets: TiledTileset[];
+}
+```
+
+### Layer Format
+```typescript
+interface TiledLayer {
+  id: number;
+  name: string;
+  type: "tilelayer";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+  visible: boolean;
+  data: number[]; // CSV format: tile IDs (0-based, -1 for empty)
+  encoding?: "csv";
+}
+```
+
+### Tileset Format
+For MVP, embed tileset data:
+```typescript
+interface TiledTileset {
+  firstgid: number;          // First global tile ID (usually 1)
+  name: string;
+  tilewidth: number;
+  tileheight: number;
+  tilecount: number;
+  columns: number;           // Tiles per row in spritesheet
+  image: string;             // Base64 PNG data URL
+  imagewidth: number;
+  imageheight: number;
+}
+```
+
+### Data Compression
+- Use CSV encoding for layer data
+- Format: comma-separated tile IDs
+- -1 represents empty tiles
+- Row-major order (right-down)
+
+### Validation
+- Validate output against official Tiled examples
+- Test import in Tiled editor
+- Ensure tile IDs match correctly
+- Verify dimensions are correct
+
+## PNG Export Patterns
+
+### Spritesheet Export
+- Create composite canvas with grid layout
+- Calculate grid dimensions (columns = sqrt(tileCount) or custom)
+- Draw all tiles in order
+- Use `canvas.toBlob()` for conversion
+- Trigger download via `<a>` element
+
+Pattern:
+```typescript
+async function exportSpritesheet(tiles: Tile[], tileSize: number): Promise<Blob> {
+  const cols = Math.ceil(Math.sqrt(tiles.length));
+  const rows = Math.ceil(tiles.length / cols);
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * tileSize;
+  canvas.height = rows * tileSize;
+  const ctx = canvas.getContext('2d')!;
+  
+  tiles.forEach((tile, index) => {
+    const x = (index % cols) * tileSize;
+    const y = Math.floor(index / cols) * tileSize;
+    // Draw tile at position
+  });
+  
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob!), 'image/png');
+  });
+}
+```
+
+### Individual Tile Export
+- Loop through tiles
+- Create blob for each tile
+- Trigger download (or batch via ZIP)
+
+### Map Export
+- Render map at full resolution
+- Use map canvas dimensions
+- Scale to pixel-perfect size
+- Export as single PNG
+
+### Batch Export (ZIP)
+- Use ZIP.js for client-side compression
+- Add all tile PNGs to ZIP
+- Include metadata file (optional)
+- Trigger single ZIP download
+
+Pattern:
+```typescript
+import JSZip from 'jszip';
+
+async function exportTilesAsZip(tiles: Tile[]): Promise<Blob> {
+  const zip = new JSZip();
+  
+  for (const tile of tiles) {
+    const blob = await exportTile(tile);
+    zip.file(`tile-${tile.id}.png`, blob);
+  }
+  
+  return zip.generateAsync({ type: 'blob' });
+}
+```
+
+## Download Pattern
+
+### Trigger Download
+```typescript
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+```
+
+### File Naming
+- Spritesheet: `{projectName}-spritesheet.png`
+- Individual tiles: `{projectName}-tile-{id}.png`
+- Map: `{projectName}-map.png`
+- Tiled JSON: `{projectName}.json`
+- ZIP: `{projectName}-tiles.zip`
+
+## Base64 Encoding
+
+### For Tiled JSON
+Convert tile images to base64 data URLs:
+```typescript
+function tileToDataURL(tile: Tile): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = tile.width;
+  canvas.height = tile.height;
+  const ctx = canvas.getContext('2d')!;
+  // Draw tile to canvas
+  return canvas.toDataURL('image/png');
+}
+```
+
+## Error Handling
+
+### Validation
+- Validate tile dimensions before export
+- Check map dimensions are valid
+- Verify tile IDs are consistent
+- Ensure all required fields present
+
+### User Feedback
+- Show progress for batch exports
+- Display success/error toasts
+- Handle large file warnings
+- Provide export options (format, quality)
+
+## Testing Exports
+
+- Test Tiled JSON import in Tiled editor
+- Verify PNG dimensions are correct
+- Check tile alignment in spritesheets
+- Validate all tile IDs match
+- Test with maximum tile count (256)
