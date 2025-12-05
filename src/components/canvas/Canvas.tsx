@@ -37,6 +37,15 @@ export function Canvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
+  const touchStateRef = useRef<{
+    touches: Touch[];
+    initialDistance: number;
+    initialScale: number;
+    initialOffsetX: number;
+    initialOffsetY: number;
+    centerX: number;
+    centerY: number;
+  } | null>(null);
 
   // Convert screen coordinates to world coordinates
   const screenToWorld = useCallback(
@@ -116,6 +125,133 @@ export function Canvas({
     lastPanPointRef.current = null;
   }, []);
 
+  // Calculate distance between two touches
+  const getTouchDistance = useCallback((touch1: Touch, touch2: Touch): number => {
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }, []);
+
+  // Get center point between two touches
+  const getTouchCenter = useCallback(
+    (touch1: Touch, touch2: Touch, canvas: HTMLCanvasElement): { x: number; y: number } => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (touch1.clientX + touch2.clientX) / 2 - rect.left,
+        y: (touch1.clientY + touch2.clientY) / 2 - rect.top,
+      };
+    },
+    []
+  );
+
+  // Handle touch start
+  const handleTouchStart = useCallback(
+    (e: TouchEvent) => {
+      e.preventDefault();
+      const canvas = canvasRef.current;
+      if (!canvas || !onScaleChange || !onPanChange) return;
+
+      if (e.touches.length === 2) {
+        // Two-finger gesture: pinch zoom or pan
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const distance = getTouchDistance(touch1, touch2);
+        const center = getTouchCenter(touch1, touch2, canvas);
+
+        touchStateRef.current = {
+          touches: [touch1, touch2],
+          initialDistance: distance,
+          initialScale: scale,
+          initialOffsetX: offsetX,
+          initialOffsetY: offsetY,
+          centerX: center.x,
+          centerY: center.y,
+        };
+      } else if (e.touches.length === 1) {
+        // Single touch: pan
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        lastPanPointRef.current = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top,
+        };
+        isPanningRef.current = true;
+      }
+    },
+    [scale, offsetX, offsetY, onScaleChange, onPanChange, getTouchDistance, getTouchCenter]
+  );
+
+  // Handle touch move
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      e.preventDefault();
+      const canvas = canvasRef.current;
+      if (!canvas || !onScaleChange || !onPanChange) return;
+
+      if (e.touches.length === 2 && touchStateRef.current) {
+        // Two-finger pinch zoom
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const currentDistance = getTouchDistance(touch1, touch2);
+        const scaleFactor = currentDistance / touchStateRef.current.initialDistance;
+        const newScale = Math.max(
+          MIN_SCALE,
+          Math.min(MAX_SCALE, touchStateRef.current.initialScale * scaleFactor)
+        );
+
+        if (newScale !== scale && onScaleChange) {
+          onScaleChange(newScale);
+
+          // Get current center
+          const currentCenter = getTouchCenter(touch1, touch2, canvas);
+          const worldBefore = screenToWorld(
+            touchStateRef.current.centerX,
+            touchStateRef.current.centerY
+          );
+          const worldAfter = screenToWorld(currentCenter.x, currentCenter.y);
+
+          // Adjust pan to keep center point stable
+          const dx = (worldBefore.x - worldAfter.x) * newScale;
+          const dy = (worldBefore.y - worldAfter.y) * newScale;
+
+          onPanChange(
+            touchStateRef.current.initialOffsetX + dx,
+            touchStateRef.current.initialOffsetY + dy
+          );
+        }
+      } else if (e.touches.length === 1 && isPanningRef.current && lastPanPointRef.current) {
+        // Single touch pan
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const currentX = touch.clientX - rect.left;
+        const currentY = touch.clientY - rect.top;
+
+        const dx = currentX - lastPanPointRef.current.x;
+        const dy = currentY - lastPanPointRef.current.y;
+
+        onPanChange(offsetX + dx, offsetY + dy);
+        lastPanPointRef.current = { x: currentX, y: currentY };
+      }
+    },
+    [
+      scale,
+      offsetX,
+      offsetY,
+      onScaleChange,
+      onPanChange,
+      getTouchDistance,
+      getTouchCenter,
+      screenToWorld,
+    ]
+  );
+
+  // Handle touch end
+  const handleTouchEnd = useCallback(() => {
+    isPanningRef.current = false;
+    lastPanPointRef.current = null;
+    touchStateRef.current = null;
+  }, []);
+
   // Set up event listeners
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -123,16 +259,30 @@ export function Canvas({
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
 
     return () => {
       canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [handleWheel, handleMouseDown, handleMouseMove, handleMouseUp]);
+  }, [
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+  ]);
 
   // Draw grid overlay
   const drawGrid = useCallback(
