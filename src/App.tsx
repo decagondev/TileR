@@ -1,23 +1,14 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { Navbar } from "@/components/Navbar"
-import { Landing } from "@/pages/Landing"
-import { About } from "@/pages/About"
-import { Features } from "@/pages/Features"
-import { SupportBot } from "@/components/SupportBot"
+import { Sidebar } from "@/components/layout/Sidebar"
+import { Main } from "@/components/layout/Main"
+import { Panel } from "@/components/layout/Panel"
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/features" element={<Features />} />
-        </Routes>
-        <SupportBot />
-      </div>
-    </BrowserRouter>
+    <div className="h-screen flex overflow-hidden bg-background">
+      <Sidebar />
+      <Main />
+      <Panel />
+    </div>
   )
 }
 
