@@ -9,6 +9,8 @@ export interface CanvasProps {
   onDraw?: (ctx: CanvasRenderingContext2D) => void;
   onScaleChange?: (scale: number) => void;
   onPanChange?: (offsetX: number, offsetY: number) => void;
+  showGrid?: boolean;
+  tileSize?: number;
   className?: string;
 }
 
@@ -28,6 +30,8 @@ export function Canvas({
   onDraw,
   onScaleChange,
   onPanChange,
+  showGrid = false,
+  tileSize = 16,
   className,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -130,6 +134,42 @@ export function Canvas({
     };
   }, [handleWheel, handleMouseDown, handleMouseMove, handleMouseUp]);
 
+  // Draw grid overlay
+  const drawGrid = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      if (!showGrid || tileSize <= 0) return;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; // High-contrast for accessibility
+      ctx.lineWidth = 1 / scale; // Scale line width inversely with zoom
+
+      // Calculate visible bounds
+      const startX = Math.floor((-offsetX / scale) / tileSize) * tileSize;
+      const startY = Math.floor((-offsetY / scale) / tileSize) * tileSize;
+      const endX = Math.ceil((width / scale - offsetX / scale) / tileSize) * tileSize;
+      const endY = Math.ceil((height / scale - offsetY / scale) / tileSize) * tileSize;
+
+      // Draw vertical lines
+      for (let x = startX; x <= endX; x += tileSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+        ctx.stroke();
+      }
+
+      // Draw horizontal lines
+      for (let y = startY; y <= endY; y += tileSize) {
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    },
+    [showGrid, tileSize, scale, offsetX, offsetY, width, height]
+  );
+
   // Render canvas
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -149,13 +189,18 @@ export function Canvas({
     ctx.save();
     ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
+    // Draw grid first (behind content)
+    if (showGrid) {
+      drawGrid(ctx);
+    }
+
     // Call custom draw function if provided
     if (onDraw) {
       onDraw(ctx);
     }
 
     ctx.restore();
-  }, [width, height, scale, offsetX, offsetY, onDraw]);
+  }, [width, height, scale, offsetX, offsetY, onDraw, showGrid, drawGrid]);
 
   return (
     <canvas
