@@ -1,5 +1,5 @@
-import { Layer } from "./Layer";
-import { Tileset } from "./Tileset";
+import type { Layer } from "./Layer";
+import type { Tileset } from "./Tileset";
 
 /**
  * Map interface compatible with Tiled JSON format (subset)

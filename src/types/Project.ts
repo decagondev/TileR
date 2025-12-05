@@ -1,5 +1,5 @@
-import { Tileset } from "./Tileset";
-import { Map } from "./Map";
+import type { Tileset } from "./Tileset";
+import type { Map } from "./Map";
 
 /**
  * Project interface representing a complete TileR project

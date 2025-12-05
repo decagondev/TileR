@@ -1,4 +1,4 @@
-import { Tile } from "./Tile";
+import type { Tile } from "./Tile";
 
 /**
  * Tileset interface containing a collection of tiles
