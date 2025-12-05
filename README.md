@@ -1,22 +1,18 @@
-# BotAI - Intelligent Bot Platform
+# TileR - Pixel Art Tile Editor & Tilemap Composer
 
-A modern web application for building and deploying AI-powered chatbots, featuring a multi-mode support bot with Groq AI integration.
+A lightweight, browser-based React application designed as a unified pixel-art tile editor and tilemap composer. Create, edit, and export pixel-art tiles and tilemaps in formats compatible with tools like Tiled and game engines, all while maintaining full offline capability through localStorage and IndexedDB.
 
 ## Features
 
-- **Multi-Mode Support Bot**: Three specialized bot modes:
-  - **Sales Bot**: Helps users hire BotAI for chatbot and AI solutions (llama-3.1-8b-instant)
-  - **Tutor Bot**: Educational bot teaching about chatbots and BotAI services (meta-llama/llama-4-scout-17b-16e-instruct)
-  - **Raggy Bot**: Upload documents (PDF, Markdown, HTML, JS, TS, CSS, JSON, TXT) and chat about them with vector-based RAG (meta-llama/llama-4-maverick-17b-128e-instruct)
-- **Document Processing**: Upload and analyze multiple file types with intelligent parsing
-- **Vector-Based RAG**: In-memory vector database for semantic search and document retrieval
-- **Resume Analysis**: Special handling for resume documents with career recommendations
-- **Markdown Rendering**: Rich markdown support for bot responses
-- **Persistent Chat History**: Chat history saved in IndexedDB with automatic persistence
-- **Dark Mode**: Beautiful dark theme by default
-- **Responsive Design**: Works seamlessly on all devices
-- **Floating Chat Interface**: Minimizable and maximizable chat window
-- **Multi-Page Navigation**: Landing, About, and Features pages
+- **Pixel Canvas for Tile Editing**: Configurable tile sizes (8x8, 16x16, 32x32 presets; custom input) with tools: Pencil, Eraser, Flood Fill, Color Picker
+- **Tile Palette**: Scrollable grid view of tiles with auto-assigned IDs, add/duplicate/delete functionality
+- **Tilemap Editor**: Grid-based painting with configurable dimensions (1x1 to 256x256 tiles)
+- **Export/Import**: 
+  - PNG export (spritesheet, individual tiles, map rasterization)
+  - Tiled-compatible JSON export
+  - Import tilesheet PNGs with auto-slicing
+- **Project Management**: Auto-save to IndexedDB, recent projects list, offline-first operation
+- **Dark Mode**: Beautiful dark theme with light mode support
 
 ## Setup
 
@@ -25,52 +21,39 @@ A modern web application for building and deploying AI-powered chatbots, featuri
 npm install
 ```
 
-2. Create a `.env` file in the root directory:
-```env
-VITE_GROQ_API_KEY=your_groq_api_key_here
-```
-
-Get your API key from [Groq Console](https://console.groq.com/)
-
-3. Run the development server:
+2. Run the development server:
 ```bash
 npm run dev
 ```
 
+3. Open your browser to the local development URL (typically `http://localhost:5173`)
+
 ## Tech Stack
 
-- **Frontend Framework**: React 19 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS 4 with custom design system
-- **AI Integration**: Groq SDK with multiple Llama models
-- **Document Processing**: PDF.js for PDF parsing, custom parsers for other formats
-- **Storage**: IndexedDB for persistent chat history and document storage
-- **Routing**: React Router v7 for multi-page navigation
-- **UI Components**: Radix UI primitives with custom components
-- **Markdown**: react-markdown with GitHub Flavored Markdown support
-- **Vector Search**: Custom in-memory vector database implementation
+- **Frontend Framework**: React 19 + TypeScript 5
+- **Build Tool**: Vite 7
+- **Styling**: Tailwind CSS 4 with shadcn/ui components
+- **Canvas**: Native HTML5 Canvas API
+- **Storage**: IndexedDB for projects/tiles, localStorage for settings
+- **Icons**: lucide-react
 
 ## Project Structure
 
 ```
 src/
 ├── components/          # React components
-│   ├── SupportBot.tsx  # Main chat interface
-│   ├── MarkdownRenderer.tsx
-│   ├── Navbar.tsx
-│   └── ui/             # Reusable UI components
-├── pages/              # Route pages
-│   ├── Landing.tsx
-│   ├── About.tsx
-│   └── Features.tsx
-├── lib/                # Core functionality
-│   ├── groqClient.ts   # Groq API integration
-│   ├── vectorDB.ts     # Vector database implementation
-│   ├── fileParser.ts   # Document parsing
-│   ├── pdfParser.ts    # PDF-specific parsing
-│   ├── storage.ts      # IndexedDB wrapper
-│   └── siteContext.json # Bot context data
-└── main.tsx           # Application entry point
+│   ├── canvas/         # Canvas rendering components
+│   ├── layout/         # Layout components (Sidebar, Main, Panel)
+│   └── ui/             # shadcn/ui components
+├── features/           # Feature modules
+│   ├── tiles/          # Tile editing
+│   ├── map/            # Map editing
+│   └── projects/        # Project management
+├── hooks/              # Custom React hooks
+├── lib/                # Utility functions
+├── storage/            # Storage abstractions (IndexedDB)
+├── types/              # TypeScript interfaces
+└── utils/              # Export utilities
 ```
 
 ## Development
@@ -82,25 +65,12 @@ src/
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
-### Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-VITE_GROQ_API_KEY=your_groq_api_key_here
-```
-
-Get your API key from [Groq Console](https://console.groq.com/)
-
 ## Usage
 
-1. **Sales Bot Mode**: Ask questions about BotAI's services and how to hire the company for chatbot solutions
-2. **Tutor Bot Mode**: Learn about chatbots, AI automation, and BotAI's features
-3. **Raggy Bot Mode**: 
-   - Upload documents (PDF, Markdown, HTML, JavaScript, TypeScript, CSS, JSON, TXT)
-   - Chat about the uploaded documents
-   - Special resume analysis with career recommendations
-   - Multiple file support with vector-based semantic search
+1. **Create a Project**: Start a new project or open a recent one
+2. **Edit Tiles**: Use the Tile Editor to create pixel art tiles with drawing tools
+3. **Build Maps**: Use the Map Editor to paint tiles onto a tilemap grid
+4. **Export**: Export your work as PNG spritesheets or Tiled-compatible JSON
 
 ## License
 
