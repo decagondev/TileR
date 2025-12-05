@@ -1,14 +1,16 @@
-import { Card } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { MapConfigPanel } from "@/features/map/MapConfigPanel"
+import { LayerPanel } from "@/features/map/LayerPanel"
 
 export function Panel() {
   return (
-    <div className="w-64 border-l border-border bg-card p-4">
-      <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Properties</h2>
-        <p className="text-sm text-muted-foreground">
-          Properties and export options will appear here
-        </p>
-      </Card>
+    <div className="w-64 border-l border-border bg-card p-4 h-full overflow-hidden flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="space-y-4 pr-4">
+          <MapConfigPanel />
+          <LayerPanel />
+        </div>
+      </ScrollArea>
     </div>
   )
 }

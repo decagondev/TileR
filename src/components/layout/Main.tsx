@@ -1,4 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Editor } from "@/features/tiles/Editor"
+import { MapCanvas } from "@/features/map/MapCanvas"
 
 export function Main() {
   return (
@@ -8,15 +10,11 @@ export function Main() {
           <TabsTrigger value="tile-editor">Tile Editor</TabsTrigger>
           <TabsTrigger value="map-editor">Map Editor</TabsTrigger>
         </TabsList>
-        <TabsContent value="tile-editor" className="flex-1 m-0 p-4">
-          <div className="h-full flex items-center justify-center border border-border rounded-lg">
-            <p className="text-muted-foreground">Tile Editor Canvas</p>
-          </div>
+        <TabsContent value="tile-editor" className="flex-1 m-0">
+          <Editor />
         </TabsContent>
-        <TabsContent value="map-editor" className="flex-1 m-0 p-4">
-          <div className="h-full flex items-center justify-center border border-border rounded-lg">
-            <p className="text-muted-foreground">Map Editor Canvas</p>
-          </div>
+        <TabsContent value="map-editor" className="flex-1 m-0">
+          <MapCanvas />
         </TabsContent>
       </Tabs>
     </div>
